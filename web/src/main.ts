@@ -106,11 +106,14 @@ function showSaid(text: string, ceo: boolean) {
 
 // ---------- the new hire ----------
 const person = (): Person => ({ name: $<HTMLInputElement>('#hName').value.trim(), role: $<HTMLInputElement>('#hRole').value.trim(), team: $<HTMLInputElement>('#hTeam').value.trim(), start: $<HTMLInputElement>('#hStart').value });
+/** The blanks in the letter grow with what is typed in them. */
+function fitBlanks() { $$<HTMLInputElement>('.blank:not(.date)').forEach((i) => { i.style.width = `${Math.max(5, Math.ceil((i.value || i.placeholder).length * 0.84) + 1)}ch`; }); }
+document.addEventListener('input', (e) => { if ((e.target as HTMLElement).classList?.contains('blank')) fitBlanks(); });
 function usePerson(p: Partial<Person>) {
   $<HTMLInputElement>('#hName').value = p.name || ''; $<HTMLInputElement>('#hRole').value = p.role || '';
   $<HTMLInputElement>('#hTeam').value = p.team || ''; $<HTMLInputElement>('#hStart').value = /^\d{4}-\d{2}-\d{2}$/.test(p.start || '') ? p.start! : '';
   $$('#names button').forEach((b) => b.setAttribute('aria-pressed', String(b.textContent === p.name)));
-  $('#mission').hidden = true;
+  $('#mission').hidden = true; fitBlanks();
 }
 /** A list of new hires: one per line, "name, role, team, start date". */
 function useList(text: string) {
@@ -140,11 +143,16 @@ function highlight(text: string, quote: string) {
   let best = -1, bi = -1; parts.forEach((p, i) => { const n = p.toLowerCase().split(/\s+/).filter((w) => words.has(w)).length; if (n > best) { best = n; bi = i; } });
   return parts.map((p, i) => (i === bi && best > 1 ? `<mark>${p}</mark>` : p)).join(' ');
 }
-function showSource(found: boolean, title: string, text: string, quote: string) {
-  $('#source').hidden = false;
-  const tag = $('#srcTag'); tag.textContent = found ? 'From the company story' : 'Not in the company story'; tag.classList.toggle('no', !found);
-  $('#srcTitle').textContent = found ? title : '';
-  $('#srcText').innerHTML = found ? highlight(text, quote) : 'Amara does not make things up. She offers to talk about it in person.';
+/** The conversation under the stage: your question, then Amara's answer with the words from the story it is based on. */
+function bubble(cls: string, html: string) {
+  const t = $('#thread'); t.querySelector('.empty')?.remove();
+  t.insertAdjacentHTML('beforeend', `<div class="bub ${cls}">${html}</div>`); t.scrollTop = t.scrollHeight;
+}
+function answerBubble(a: Answer) {
+  const src = a.found
+    ? `<details class="src"><summary>From the company story · ${esc(a.title)}</summary><p dir="auto">${highlight(a.text, a.quote)}</p></details>`
+    : '<span class="src no">Not in the company story: she will not make it up</span>';
+  bubble('ceo', `<img src="assets/ceo/amara.webp" alt=""><div class="txt"><p dir="auto">${esc(a.say)}</p>${src}</div>`);
 }
 
 // ---------- the welcome and the questions ----------
@@ -172,10 +180,9 @@ async function playWelcome() {
     if (w.link) {
       $('#missionK').textContent = `How ${p.name.split(' ')[0]}'s work fits the mission`;
       $('#missionText').textContent = w.link;
-      $('#missionFrom').textContent = w.title ? `From the story: ${w.title}` : '';
+      $('#missionFrom').textContent = w.title ? `From the company story · ${w.title}` : '';
       $('#mission').hidden = false;
     }
-    if (w.quote) showSource(true, w.title, w.text, w.quote);
     track('welcome', { team: !!p.team, start: !!p.start, own: st.own, lang: st.lang });
     // the welcome plays like a video message: the room widens and a name card shows; the panel comes back after
     $('#ncName').textContent = p.name;
@@ -192,8 +199,9 @@ async function send(text: string) {
   hush(); st.busy = true; void getSeat(); goLive();
   showSaid(text, false); setState('Thinking'); st.history.push({ who: 'you', text });
   try {
+    bubble('you', `<p dir="auto">${esc(text)}</p>`);
     const a = await post<Answer>('ask', { question: text, history: st.history.slice(-6) });
-    showSource(a.found, a.title, a.text, a.quote); track('ask', { found: a.found });
+    answerBubble(a); track('ask', { found: a.found });
     await say(a.say);
   } catch (e) { showSaid((e as Error).message, false); }
   finally { st.busy = false; if (st.live && stateEl.textContent === 'Thinking') setState('Ask anything'); }
@@ -254,6 +262,7 @@ $('#mic').onclick = async () => {
 function useStory(text: string) {
   st.story = text.trim().slice(0, 30000); st.own = !!st.story && st.story !== cfg?.sampleStory;
   st.company = st.own ? '' : cfg?.company || 'Tallyfield';
+  $('#letterCo').textContent = st.company || 'the company';
   $('#storyName').innerHTML = st.own ? `<b>Your company story</b> · ${st.story.length.toLocaleString()} characters` : '<b>Tallyfield</b> · why we started, mission, values, teams (sample)';
   // teams from "### Team" headings, for the team field
   const teams = st.own ? [...st.story.matchAll(/^#{3,4}\s+(.+)$/gm)].map((m) => m[1].trim()) : cfg?.teams || [];
