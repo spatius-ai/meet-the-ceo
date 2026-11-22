@@ -71,7 +71,7 @@ async function playPlain(next: () => Promise<Int16Array | null>) {
   if (ctx.state !== 'closed') await new Promise((r) => setTimeout(r, Math.max(0, (at - ctx.currentTime) * 1000)));
 }
 let sayRun = 0; // each new line, or hush(), ends the pieces of the one before
-function hush() { sayRun++; seat?.interrupt(); if (plainCtx && plainCtx.state !== 'closed') void plainCtx.close(); plainCtx = null; }
+function hush() { sayRun++; stage.classList.remove('film'); seat?.interrupt(); if (plainCtx && plainCtx.state !== 'closed') void plainCtx.close(); plainCtx = null; }
 const setState = (t: string) => { stateEl.textContent = t; };
 /** Cut a long text into short spoken pieces (one or two sentences), so the subtitle never covers the face. */
 function pieces(text: string, max = 150) {
@@ -124,6 +124,10 @@ function welcomeLink(p: Person) {
   return `${location.origin}${location.pathname}?${q}`;
 }
 
+/** The start date for the name card, in the page's language: "Tuesday 1 December". */
+const LOCALES: Record<Lang, string> = { en: 'en-GB', es: 'es-ES', zh: 'zh-CN', ar: 'ar', fr: 'fr-FR' };
+function startLabel(start: string) { try { return new Intl.DateTimeFormat(LOCALES[st.lang], { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${start}T12:00:00Z`)); } catch { return start; } }
+
 // ---------- the panel ----------
 function showTries() { $('#tries').innerHTML = TRIES[st.lang].map((t) => `<button type="button" dir="auto">${esc(t)}</button>`).join(''); }
 function highlight(text: string, quote: string) {
@@ -173,7 +177,12 @@ async function playWelcome() {
     }
     if (w.quote) showSource(true, w.title, w.text, w.quote);
     track('welcome', { team: !!p.team, start: !!p.start, own: st.own, lang: st.lang });
+    // the welcome plays like a video message: the room widens and a name card shows; the panel comes back after
+    $('#ncName').textContent = p.name;
+    $('#ncMeta').textContent = [p.team || p.role, p.start ? `starts ${startLabel(p.start)}` : ''].filter(Boolean).join(' · ');
+    stage.classList.add('film');
     await say(w.say);
+    stage.classList.remove('film');
     $('#q').focus();
   } catch (e) { showSaid((e as Error).message, false); }
   finally { st.busy = false; if (st.live && stateEl.textContent === 'Writing the welcome') setState('Ask anything'); }

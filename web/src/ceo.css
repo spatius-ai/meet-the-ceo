@@ -172,3 +172,19 @@
   .linkish { border: 0; background: none; padding: 0; color: var(--lab-accent); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
   .own .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .own .row .btn { height: 34px; padding: 0 14px; }
+  /* ---------- the welcome plays like a video message: the room widens, the panel slides away ---------- */
+  .stage { transition: grid-template-columns 700ms cubic-bezier(.22,1,.36,1); }
+  .panel { transition: opacity 250ms ease-out; }
+  .call img.bg, .call img.front { object-position: 50% 75.5%; } /* the desk edge stays put when the room gets wider */
+  @container (min-width: 721px) {
+    .call { aspect-ratio: auto; height: 42.67cqw; }              /* the same height in both shapes */
+    .stage.film { grid-template-columns: minmax(0, 100fr) minmax(0, 0fr); }
+    .stage.film .panel { opacity: 0; padding: 0; overflow: hidden; pointer-events: none; }
+  }
+  @container (max-width: 720px) { .stage.film .panel { display: none; } }
+  .namecard { position: absolute; left: 2.2cqw; top: 22%; z-index: 4; display: grid; gap: .4cqw; padding: 1.1cqw 1.6cqw 1.2cqw 1.4cqw; border-left: 4px solid var(--lab-accent); border-radius: 0 12px 12px 0; background: rgb(21 17 49 / .55); backdrop-filter: blur(10px); color: #fff; opacity: 0; transform: translateX(-12px); transition: opacity 500ms 350ms, transform 600ms 350ms cubic-bezier(.22,1,.36,1); pointer-events: none; max-width: 34%; }
+  .stage.film .namecard { opacity: 1; transform: none; }
+  .namecard span { font: 500 max(10px, .8cqw)/1 var(--hp-font-mono); letter-spacing: .12em; text-transform: uppercase; color: #CFC9EE; }
+  .namecard b { font: 600 max(18px, 2.4cqw)/1.1 var(--hp-font-sans); }
+  .namecard small { font: 400 max(12px, 1cqw)/1.35 var(--hp-font-sans); color: #E9E6F7; }
+  @container (max-width: 720px) { .namecard { top: 52px; max-width: 70%; } }
