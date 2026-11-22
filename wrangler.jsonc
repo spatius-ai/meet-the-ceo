@@ -1,0 +1,14 @@
+// Cloudflare Workers settings for Meet the CEO. Used by "Deploy to Cloudflare" and by `npm run deploy`.
+// Your own company story and new hires can go in "vars" too (CEO_STORY, CEO_PEOPLE, CEO_COMPANY; write \\n for a new line).
+{
+  "name": "meet-the-ceo",
+  "main": "server/worker.mjs",
+  "compatibility_date": "2025-09-01",
+  "assets": { "directory": "./dist", "binding": "ASSETS" },
+  "build": { "command": "npm run build" },
+  "vars": {
+    "SPATIUS_REGION": "us-west",
+    "CEO_LANG": "en",
+    "CEO_SECONDS": "180"
+  }
+}
